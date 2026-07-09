@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <!-- Retry cron disabled: the log row does not store the full payload, so retrying
+             publishes an empty product_data array, which wipes tier prices and all product
+             links for the retried product. Do not re-enable until the payload is persisted. -->
+
+        <!-- Nightly cleanup: removes completed queue_message/queue_message_status rows
+             (queue_message.body is longtext and grows large) and trims old log table entries. -->
+        <job name="mohan_product_queue_cleanup"
+             instance="Mohan\ProductQueueSave\Cron\CleanupCompletedMessages"
+             method="execute">
+            <schedule>0 3 * * *</schedule>
+        </job>
+    </group>
+</config>

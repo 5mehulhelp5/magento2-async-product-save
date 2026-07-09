@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Logger -->
+    <type name="Mohan\ProductQueueSave\Logger\Handler">
+        <arguments>
+            <argument name="filesystem" xsi:type="object">Magento\Framework\Filesystem\Driver\File</argument>
+        </arguments>
+    </type>
+    <type name="Mohan\ProductQueueSave\Logger\Logger">
+        <arguments>
+            <argument name="name" xsi:type="string">productQueueSave</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">Mohan\ProductQueueSave\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Service preferences -->
+    <preference for="Mohan\ProductQueueSave\Api\ProductQueueSaveInterface"
+                type="Mohan\ProductQueueSave\Model\ProductQueueSave"/>
+    <preference for="Mohan\ProductQueueSave\Api\Data\QueueLogInterface"
+                type="Mohan\ProductQueueSave\Model\Queue\Log"/>
+
+    <!-- Consumer with all processors -->
+    <type name="Mohan\ProductQueueSave\Queue\Consumer\ProductSaveConsumer">
+        <arguments>
+            <argument name="imageProcessor"        xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\ImageProcessor</argument>
+            <argument name="tierPriceProcessor"    xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\TierPriceProcessor</argument>
+            <argument name="linkProcessor"         xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\LinkProcessor</argument>
+            <argument name="customOptionProcessor" xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\CustomOptionProcessor</argument>
+            <argument name="configurableProcessor" xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\ConfigurableProcessor</argument>
+            <argument name="stockProcessor"        xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\StockProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- CLI Commands -->
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="mohan_product_queue_status"
+                      xsi:type="object">Mohan\ProductQueueSave\Console\Command\QueueStatus</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- UI DataProvider for queue log grid -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="mohan_product_queue_log_listing_data_source"
+                      xsi:type="string">Mohan\ProductQueueSave\Model\ResourceModel\Queue\Log\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Mohan\ProductQueueSave\Ui\DataProvider\QueueLogDataProvider">
+        <arguments>
+            <argument name="collectionFactory" xsi:type="object">Mohan\ProductQueueSave\Model\ResourceModel\Queue\Log\CollectionFactory</argument>
+        </arguments>
+    </type>
+    <type name="Magento\Catalog\Model\Product\Image\RemoveDeletedImagesFromCache">
+        <plugin name="mohan_skip_image_cache_cleanup_in_queue"
+                type="Mohan\ProductQueueSave\Plugin\SkipImageCacheCleanupInQueue" />
+    </type>
+
+</config>

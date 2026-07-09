@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/topology.xsd">
+    <exchange name="mohan.product.queue.exchange" type="topic" connection="db">
+        <binding id="mohan.product.queue.binding"
+                 topic="mohan.product.queue.save"
+                 destinationType="queue"
+                 destination="mohan.product.queue.save"/>
+    </exchange>
+</config>

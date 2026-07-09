@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="mohan" translate="label" sortOrder="500">
+            <label>Mohan</label>
+        </tab>
+        <section id="mohanqueue" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="0" showInStore="0">
+            <tab>mohan</tab>
+            <label>Product Queue Save</label>
+            <resource>Mohan_ProductQueueSave::queue_manage</resource>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>General Settings</label>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Module</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable or disable the Product Queue Save feature.</comment>
+                </field>
+                <field id="retry_attempts" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Retry Attempts</label>
+                    <validate>validate-digits validate-digits-range digits-range-1-10</validate>
+                    <comment>Number of times to retry a failed product save (1-10).</comment>
+                </field>
+                <field id="notify_on_failure" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Notify Admin on Failure</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="admin_email" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Admin Email for Notifications</label>
+                    <validate>validate-email</validate>
+                    <depends>
+                        <field id="notify_on_failure">1</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

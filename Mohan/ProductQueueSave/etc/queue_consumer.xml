@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/consumer.xsd">
+    <consumer name="mohan.product.queue.save.consumer"
+              queue="mohan.product.queue.save"
+              connection="db"
+              maxMessages="100"
+              handler="Mohan\ProductQueueSave\Queue\Consumer\ProductSaveConsumer::process"/>
+</config>

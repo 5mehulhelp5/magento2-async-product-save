@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ * Declarative schema: creates the queue log table.
+ */
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="mohan_product_queue_log"
+           resource="default"
+           engine="innodb"
+           comment="Mohan Product Queue Save – Processing Log">
+
+        <column xsi:type="int"
+                name="log_id"
+                padding="10"
+                unsigned="true"
+                nullable="false"
+                identity="true"
+                comment="Log ID"/>
+
+        <column xsi:type="varchar"
+                name="message_id"
+                nullable="false"
+                length="64"
+                comment="Unique Queue Message ID"/>
+
+        <column xsi:type="int"
+                name="product_id"
+                padding="10"
+                unsigned="true"
+                nullable="true"
+                comment="Catalog Product Entity ID"/>
+
+        <column xsi:type="varchar"
+                name="sku"
+                nullable="true"
+                length="64"
+                comment="Product SKU (populated after save)"/>
+
+        <column xsi:type="varchar"
+                name="status"
+                nullable="false"
+                length="32"
+                default="pending"
+                comment="Queue Status: pending|processing|success|failed|retry"/>
+
+        <column xsi:type="smallint"
+                name="store_id"
+                padding="5"
+                unsigned="true"
+                nullable="false"
+                default="0"
+                comment="Store ID"/>
+
+        <column xsi:type="int"
+                name="admin_user_id"
+                padding="10"
+                unsigned="true"
+                nullable="true"
+                comment="Admin User Who Triggered the Save"/>
+
+        <column xsi:type="text"
+                name="error_message"
+                nullable="true"
+                comment="Error message if processing failed"/>
+
+        <column xsi:type="smallint"
+                name="retry_count"
+                padding="5"
+                unsigned="true"
+                nullable="false"
+                default="0"
+                comment="Number of processing retries"/>
+
+        <column xsi:type="timestamp"
+                name="created_at"
+                on_update="false"
+                nullable="false"
+                default="CURRENT_TIMESTAMP"
+                comment="Created At"/>
+
+        <column xsi:type="timestamp"
+                name="processed_at"
+                on_update="false"
+                nullable="true"
+                comment="Timestamp when successfully or finally processed"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="log_id"/>
+        </constraint>
+
+        <constraint xsi:type="unique" referenceId="MOHAN_PRODUCT_QUEUE_LOG_MESSAGE_ID">
+            <column name="message_id"/>
+        </constraint>
+
+        <index referenceId="MOHAN_PRODUCT_QUEUE_LOG_PRODUCT_ID" indexType="btree">
+            <column name="product_id"/>
+        </index>
+
+        <index referenceId="MOHAN_PRODUCT_QUEUE_LOG_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+
+        <index referenceId="MOHAN_PRODUCT_QUEUE_LOG_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+
+    </table>
+
+</schema>

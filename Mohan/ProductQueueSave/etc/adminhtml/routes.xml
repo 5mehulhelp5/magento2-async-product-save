@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ *
+ * IMPORTANT: The admin frontName must be a single lowercase word or
+ * hyphenated string. Underscores cause Magento's admin router to fail
+ * to match the route, resulting in a 404. Use "mohanqueue" instead
+ * of "mohanqueue".
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="admin">
+        <route id="mohanqueue" frontName="mohanqueue">
+            <module name="Mohan_ProductQueueSave" before="Magento_Backend"/>
+        </route>
+    </router>
+</config>

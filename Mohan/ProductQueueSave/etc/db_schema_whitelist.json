@@ -1,0 +1,26 @@
+{
+    "mohan_product_queue_log": {
+        "column": {
+            "log_id": true,
+            "message_id": true,
+            "product_id": true,
+            "sku": true,
+            "status": true,
+            "store_id": true,
+            "admin_user_id": true,
+            "error_message": true,
+            "retry_count": true,
+            "created_at": true,
+            "processed_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "MOHAN_PRODUCT_QUEUE_LOG_MESSAGE_ID": true
+        },
+        "index": {
+            "MOHAN_PRODUCT_QUEUE_LOG_PRODUCT_ID": true,
+            "MOHAN_PRODUCT_QUEUE_LOG_STATUS": true,
+            "MOHAN_PRODUCT_QUEUE_LOG_CREATED_AT": true
+        }
+    }
+}

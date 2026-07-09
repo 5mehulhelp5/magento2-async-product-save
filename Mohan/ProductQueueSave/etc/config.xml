@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Mohan_ProductQueueSave
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <mohanqueue>
+            <general>
+                <enabled>1</enabled>
+                <retry_attempts>3</retry_attempts>
+                <notify_on_failure>0</notify_on_failure>
+                <admin_email></admin_email>
+            </general>
+        </mohanqueue>
+    </default>
+</config>
