@@ -1,5 +1,5 @@
 /**
- * Mohan_ProductQueueSave — save-via-queue.js
+ * Dzinehub_ProductQueueSave — save-via-queue.js
  *
  * Handles the "Save via Queue" button on the admin product edit page
  * using Magento's UI Registry to retrieve product data.
@@ -14,7 +14,7 @@ define([
 ], function ($, registry, $t, uiAlert, uiConfirm) {
     'use strict';
 
-    $.widget('mohan.saveViaQueue', {
+    $.widget('dzinehub.saveViaQueue', {
 
         options: {
             url: '',          // Queue-save controller URL
@@ -299,6 +299,15 @@ define([
                     return;
                 }
 
+                // Skip multiselect fields (name ends with []).
+                // rawData already carries the correct comma-separated value for every
+                // multiselect attribute (e.g. "1,2,3"). serializeArray() emits one entry
+                // per selected option with the same name, so a plain assignment would keep
+                // only the last option. Skipping here lets the rawData value through intact.
+                if (name.slice(-2) === '[]') {
+                    return;
+                }
+
                 // Merge product fields and other relevant inputs
                 // Flat assignment ensures PHP correctly reconstructs nested arrays like media_gallery
                 if (name.indexOf('product[') === 0) {
@@ -400,5 +409,5 @@ define([
         }
     });
 
-    return $.mohan.saveViaQueue;
+    return $.dzinehub.saveViaQueue;
 });
