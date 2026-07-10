@@ -40,7 +40,7 @@ A Magento 2 module that adds a **"Save via Queue & Close"** button to the admin 
 ### Via Composer (recommended)
 
 ```bash
-composer require mohan/magento2-product-queue-save
+composer require mohan-devstack/magento2-product-queue-save
 php bin/magento module:enable Mohan_ProductQueueSave
 php bin/magento setup:upgrade
 php bin/magento setup:di:compile

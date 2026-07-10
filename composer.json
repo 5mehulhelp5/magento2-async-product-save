@@ -1,5 +1,5 @@
 {
-    "name": "mohan/magento2-product-queue-save",
+    "name": "mohan-devstack/magento2-product-queue-save",
     "description": "Magento 2 module — Save products asynchronously via message queue with full configurable, gallery, tier-price, custom-option, and product-link support.",
     "type": "magento2-module",
     "version": "1.0.0",
