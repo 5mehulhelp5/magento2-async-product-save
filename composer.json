@@ -1,6 +1,6 @@
 {
     "name": "mohan-devstack/magento2-product-queue-save",
-    "description": "Magento 2 module — Save products asynchronously via message queue with full configurable, gallery, tier-price, custom-option, and product-link support.",
+    "description": "Magento 2 module — Save all product types asynchronously via message queue (simple, configurable, grouped, bundle, downloadable). No browser timeouts.",
     "type": "magento2-module",
     "license": "MIT",
     "authors": [
