@@ -7,15 +7,19 @@ declare(strict_types=1);
 
 namespace Mohan\ProductQueueSave\Helper;
 
-use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Store\Model\ScopeInterface;
 
-class Config extends AbstractHelper
+class Config
 {
     private const XML_PATH_ENABLED        = 'mohanqueue/general/enabled';
     private const XML_PATH_RETRY          = 'mohanqueue/general/retry_attempts';
     private const XML_PATH_NOTIFY         = 'mohanqueue/general/notify_on_failure';
     private const XML_PATH_ADMIN_EMAIL    = 'mohanqueue/general/admin_email';
+
+    public function __construct(
+        private readonly ScopeConfigInterface $scopeConfig
+    ) {}
 
     public function isEnabled(): bool
     {

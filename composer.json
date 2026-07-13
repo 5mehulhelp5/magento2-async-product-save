@@ -16,7 +16,12 @@
         "magento/module-configurable-product": "*",
         "magento/module-catalog-inventory": "*",
         "magento/module-store": "*",
-        "magento/module-backend": "*"
+        "magento/module-backend": "*",
+        "magento/module-downloadable": "*",
+        "magento/module-bundle": "*",
+        "magento/module-grouped-product": "*",
+        "magento/module-message-queue": "*",
+        "magento/module-asynchronous-operations": "*"
     },
     "autoload": {
         "files": [

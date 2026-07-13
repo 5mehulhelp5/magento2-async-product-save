@@ -37,7 +37,6 @@ use Mohan\ProductQueueSave\Queue\Processor\ConfigurableProcessor;
 use Mohan\ProductQueueSave\Queue\Processor\StockProcessor;
 use Magento\Catalog\Model\ResourceModel\Product\CategoryLink as CategoryLinkResource;
 use Magento\Framework\Serialize\SerializerInterface;
-use Magento\Framework\App\ObjectManager;
 use Magento\Framework\View\DesignInterface;
 
 /**
@@ -69,7 +68,8 @@ class ProductSaveConsumer
         private readonly DataObjectHelper $dataObjectHelper,
         private readonly SerializerInterface $serializer,
         private readonly DataObjectFactory $dataObjectFactory,
-        private readonly CategoryLinkResource $categoryLinkResource
+        private readonly CategoryLinkResource $categoryLinkResource,
+        private readonly DesignInterface $design
     ) {}
 
     public function process(string $messageJson): void
@@ -84,8 +84,7 @@ class ProductSaveConsumer
 
             $this->appState->emulateAreaCode(Area::AREA_ADMINHTML, function () use ($message, $log) {
                 // Initialize design theme to Backend (standard for Catalog operations)
-                $design = ObjectManager::getInstance()->get(DesignInterface::class);
-                $design->setDesignTheme('Magento/backend', Area::AREA_ADMINHTML);
+                $this->design->setDesignTheme('Magento/backend', Area::AREA_ADMINHTML);
                 
                 $this->doSave($message, $log);
             });

@@ -19,6 +19,7 @@ use Mohan\ProductQueueSave\Api\ProductQueueSaveInterface;
 use Mohan\ProductQueueSave\Helper\Config;
 use Mohan\ProductQueueSave\Helper\ProductDataCollector;
 use Magento\Framework\DataObjectFactory;
+use Mohan\ProductQueueSave\Logger\Logger;
 use Mohan\ProductQueueSave\Model\Queue\LogFactory;
 use Mohan\ProductQueueSave\Model\ResourceModel\Queue\Log as LogResource;
 
@@ -44,6 +45,7 @@ class Save extends Action implements HttpPostActionInterface, CsrfAwareActionInt
         private readonly JsonFactory $jsonFactory,
         private readonly Config $config,
         private readonly Random $mathRandom,
+        private readonly Logger $logger,
         private readonly LogFactory $logFactory,
         private readonly LogResource $logResource
     ) {
@@ -158,7 +160,7 @@ class Save extends Action implements HttpPostActionInterface, CsrfAwareActionInt
             ]);
 
         } catch (\Throwable $e) {
-            $this->_objectManager->get(\Psr\Log\LoggerInterface::class)->critical(
+            $this->logger->critical(
                 'Mohan ProductQueueSave error: ' . $e->getMessage(),
                 ['trace' => $e->getTraceAsString()]
             );

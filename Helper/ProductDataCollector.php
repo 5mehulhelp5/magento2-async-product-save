@@ -11,31 +11,24 @@ use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
-use Magento\Framework\App\Helper\AbstractHelper;
-use Magento\Framework\App\Helper\Context;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Mohan\ProductQueueSave\Logger\Logger as CustomLogger;
 
 /**
- * Class ProductDataCollector
- *
  * Extracts the full product POST data from the admin request and
  * normalises it into a serialisable array ready for the queue.
  */
-class ProductDataCollector extends AbstractHelper
+class ProductDataCollector
 {
     public function __construct(
-        Context $context,
         private readonly RequestInterface $request,
         private readonly SerializerInterface $serializer,
         private readonly StoreManagerInterface $storeManager,
         private readonly ProductRepositoryInterface $productRepository,
         private readonly CustomLogger $customLogger
-    ) {
-        parent::__construct($context);
-    }
+    ) {}
 
     /**
      * Build a complete, serialisable product data array from the current request.
@@ -43,7 +36,7 @@ class ProductDataCollector extends AbstractHelper
     public function collectFromRequest(): array
     {
         $product   = $this->request->getPost('product', []);
-        
+
         // If the JS sent product data as a JSON string (common in AJAX), decode it.
         if (is_string($product) && !empty($product)) {
             try {
@@ -55,7 +48,7 @@ class ProductDataCollector extends AbstractHelper
         }
         $stockData = $product['stock_data'] ?? [];
         $qtyStatus = $product['quantity_and_stock_status'] ?? [];
-        
+
         // Merge both sources to ensure we don't lose 'qty' or 'is_in_stock'
         if (is_array($qtyStatus)) {
             $stockData = array_merge($stockData, $qtyStatus);
@@ -77,8 +70,7 @@ class ProductDataCollector extends AbstractHelper
             }
             if ($typeId) {
                 $product['type_id'] = $typeId;
-                // Add logging if we have access to logger (context has logger)
-                $this->_logger->info("ProductDataCollector: Detected type_id: " . $typeId);
+                $this->customLogger->info("ProductDataCollector: Detected type_id: " . $typeId);
             }
         }
 

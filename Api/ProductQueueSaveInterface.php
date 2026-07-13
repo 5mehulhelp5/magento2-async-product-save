@@ -11,7 +11,7 @@ declare(strict_types=1);
 namespace Mohan\ProductQueueSave\Api;
 
 /**
- * Interface ProductQueueSaveInterface
+ * @api
  */
 interface ProductQueueSaveInterface
 {

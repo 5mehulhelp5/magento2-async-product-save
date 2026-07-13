@@ -14,6 +14,7 @@ use Magento\Bundle\Model\Product\Type;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\Api\SearchCriteriaBuilder;
 use Mohan\ProductQueueSave\Logger\Logger;
 
 /**
@@ -26,6 +27,7 @@ class BundleProcessor
         private readonly OptionInterfaceFactory $optionFactory,
         private readonly LinkInterfaceFactory $linkFactory,
         private readonly ProductRepositoryInterface $productRepository,
+        private readonly SearchCriteriaBuilder $searchCriteriaBuilder,
         private readonly Logger $logger
     ) {}
 
@@ -58,6 +60,20 @@ class BundleProcessor
             return;
         }
 
+        // Pre-load all selection products in one query to avoid N+1 getById() calls.
+        $allProductIds = [];
+        foreach ($rawOptions as $optionData) {
+            if (!empty($optionData['delete'])) {
+                continue;
+            }
+            foreach ($optionData['bundle_selections'] ?? [] as $linkData) {
+                if (empty($linkData['delete']) && !empty($linkData['product_id'])) {
+                    $allProductIds[] = (int) $linkData['product_id'];
+                }
+            }
+        }
+        $productCache = $this->loadProductsByIds(array_unique($allProductIds));
+
         $options = [];
         foreach ($rawOptions as $key => $optionData) {
             if (!empty($optionData['delete'])) {
@@ -85,7 +101,7 @@ class BundleProcessor
                     $linkData['id'] = $linkData['selection_id'];
                 }
                 try {
-                    $links[] = $this->buildLink($product, $linkData);
+                    $links[] = $this->buildLink($product, $linkData, $productCache);
                 } catch (\Exception $e) {
                     $this->logger->warning('BundleProcessor: skipping selection — ' . $e->getMessage(), [
                         'product_id' => $product->getId(),
@@ -108,8 +124,34 @@ class BundleProcessor
         ]);
     }
 
-    private function buildLink(ProductInterface $product, array $linkData): \Magento\Bundle\Api\Data\LinkInterface
+    /**
+     * @param int[] $ids
+     * @return array<int, ProductInterface>
+     */
+    private function loadProductsByIds(array $ids): array
     {
+        if (empty($ids)) {
+            return [];
+        }
+        $searchCriteria = $this->searchCriteriaBuilder
+            ->addFilter('entity_id', $ids, 'in')
+            ->create();
+        $items = $this->productRepository->getList($searchCriteria)->getItems();
+        $byId  = [];
+        foreach ($items as $item) {
+            $byId[(int) $item->getId()] = $item;
+        }
+        return $byId;
+    }
+
+    /**
+     * @param array<int, ProductInterface> $productCache
+     */
+    private function buildLink(
+        ProductInterface $product,
+        array $linkData,
+        array $productCache
+    ): \Magento\Bundle\Api\Data\LinkInterface {
         /** @var \Magento\Bundle\Api\Data\LinkInterface $link */
         $link = $this->linkFactory->create(['data' => $linkData]);
 
@@ -122,7 +164,8 @@ class BundleProcessor
             }
         }
 
-        $linkedProduct = $this->productRepository->getById((int) $linkData['product_id']);
+        $id = (int) $linkData['product_id'];
+        $linkedProduct = $productCache[$id] ?? $this->productRepository->getById($id);
         $link->setSku($linkedProduct->getSku());
         $link->setQty((float) ($linkData['selection_qty'] ?? 1));
 
