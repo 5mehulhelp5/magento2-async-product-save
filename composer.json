@@ -11,17 +11,7 @@
     ],
     "require": {
         "php": ">=8.1",
-        "magento/framework": "*",
-        "magento/module-catalog": "*",
-        "magento/module-configurable-product": "*",
-        "magento/module-catalog-inventory": "*",
-        "magento/module-store": "*",
-        "magento/module-backend": "*",
-        "magento/module-downloadable": "*",
-        "magento/module-bundle": "*",
-        "magento/module-grouped-product": "*",
-        "magento/module-message-queue": "*",
-        "magento/module-asynchronous-operations": "*"
+        "magento/framework": "*"
     },
     "autoload": {
         "files": [
