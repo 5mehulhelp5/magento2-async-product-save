@@ -1,0 +1,135 @@
+<?php
+/**
+ * Mohan_ProductQueueSave
+ */
+
+declare(strict_types=1);
+
+namespace Mohan\ProductQueueSave\Queue\Processor;
+
+use Magento\Bundle\Api\Data\LinkInterfaceFactory;
+use Magento\Bundle\Api\Data\OptionInterfaceFactory;
+use Magento\Bundle\Model\Product\Price;
+use Magento\Bundle\Model\Product\Type;
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Catalog\Model\Product;
+use Mohan\ProductQueueSave\Logger\Logger;
+
+/**
+ * Sets bundle product options and selections from queue payload onto the product
+ * extension attributes so Magento's Bundle\Model\Product\SaveHandler persists them.
+ */
+class BundleProcessor
+{
+    public function __construct(
+        private readonly OptionInterfaceFactory $optionFactory,
+        private readonly LinkInterfaceFactory $linkFactory,
+        private readonly ProductRepositoryInterface $productRepository,
+        private readonly Logger $logger
+    ) {}
+
+    /**
+     * @param ProductInterface|Product $product
+     * @param array $productData
+     */
+    public function process(ProductInterface $product, array $productData): void
+    {
+        if ($product->getTypeId() !== Type::TYPE_CODE) {
+            return;
+        }
+
+        $bundlePost = $productData['bundle_options'] ?? [];
+        $rawOptions = $bundlePost['bundle_options'] ?? [];
+
+        // affect_bundle_product_selections must be true for Magento to persist selections.
+        // Default to true whenever bundle data is present in the payload.
+        $affect = isset($productData['affect_bundle_product_selections'])
+            ? (bool) $productData['affect_bundle_product_selections']
+            : !empty($rawOptions);
+
+        $product->setCanSaveBundleSelections($affect);
+
+        if (empty($rawOptions)) {
+            // No options in payload — clear so SaveHandler can remove deleted ones.
+            $ext = $product->getExtensionAttributes();
+            $ext->setBundleProductOptions([]);
+            $product->setExtensionAttributes($ext);
+            return;
+        }
+
+        $options = [];
+        foreach ($rawOptions as $key => $optionData) {
+            if (!empty($optionData['delete'])) {
+                continue;
+            }
+
+            $bundleSelections = $optionData['bundle_selections'] ?? [];
+            unset($optionData['bundle_selections']);
+
+            if (empty($bundleSelections)) {
+                continue;
+            }
+
+            /** @var \Magento\Bundle\Api\Data\OptionInterface $option */
+            $option = $this->optionFactory->create(['data' => $optionData]);
+            $option->setSku($product->getSku());
+
+            $links = [];
+            foreach ($bundleSelections as $linkData) {
+                if (!empty($linkData['delete'])) {
+                    continue;
+                }
+                // Admin form uses selection_id; API model expects id.
+                if (!empty($linkData['selection_id'])) {
+                    $linkData['id'] = $linkData['selection_id'];
+                }
+                try {
+                    $links[] = $this->buildLink($product, $linkData);
+                } catch (\Exception $e) {
+                    $this->logger->warning('BundleProcessor: skipping selection — ' . $e->getMessage(), [
+                        'product_id' => $product->getId(),
+                        'link_data'  => $linkData,
+                    ]);
+                }
+            }
+
+            $option->setProductLinks($links);
+            $options[] = $option;
+        }
+
+        $ext = $product->getExtensionAttributes();
+        $ext->setBundleProductOptions($options);
+        $product->setExtensionAttributes($ext);
+
+        $this->logger->info('BundleProcessor: options prepared', [
+            'product_id'   => $product->getId(),
+            'option_count' => count($options),
+        ]);
+    }
+
+    private function buildLink(ProductInterface $product, array $linkData): \Magento\Bundle\Api\Data\LinkInterface
+    {
+        /** @var \Magento\Bundle\Api\Data\LinkInterface $link */
+        $link = $this->linkFactory->create(['data' => $linkData]);
+
+        if ((int) $product->getPriceType() !== Price::PRICE_TYPE_DYNAMIC) {
+            if (array_key_exists('selection_price_value', $linkData)) {
+                $link->setPrice((float) $linkData['selection_price_value']);
+            }
+            if (array_key_exists('selection_price_type', $linkData)) {
+                $link->setPriceType((int) $linkData['selection_price_type']);
+            }
+        }
+
+        $linkedProduct = $this->productRepository->getById((int) $linkData['product_id']);
+        $link->setSku($linkedProduct->getSku());
+        $link->setQty((float) ($linkData['selection_qty'] ?? 1));
+
+        if (array_key_exists('selection_can_change_qty', $linkData)) {
+            $link->setCanChangeQuantity((int) $linkData['selection_can_change_qty']);
+        }
+
+        return $link;
+    }
+}

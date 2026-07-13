@@ -55,7 +55,6 @@ define([
 
         _submit: function () {
             var self = this;
-            console.log('[SaveViaQueue] _submit v7 — links from grid data sources');
 
             // 1. Find Data Source
             var provider = this.options.provider || 'product_form.product_form_data_source';
@@ -106,9 +105,10 @@ define([
             //   group=related → related fieldset → related DynamicRows
             // Soft-deleted records (delete:'1') are filtered out.
             var linkDynamicRows = {
-                'related':   'product_form.product_form.related.related.related',
-                'upsell':    'product_form.product_form.related.upsell.upsell',
-                'crosssell': 'product_form.product_form.related.crosssell.crosssell'
+                'related':    'product_form.product_form.related.related.related',
+                'upsell':     'product_form.product_form.related.upsell.upsell',
+                'crosssell':  'product_form.product_form.related.crosssell.crosssell',
+                'associated': 'product_form.product_form.grouped.associated'
             };
             var freshLinks = {};
             var anyDrFound = false;
@@ -120,10 +120,16 @@ define([
                     var kept = [];
                     $.each(records, function (i, r) {
                         if (!r['delete'] && !r['_delete']) {
-                            kept.push({
+                            var entry = {
                                 id:       r.id || r.entity_id,
                                 position: parseInt(r.position, 10) || 0
-                            });
+                            };
+                            // Grouped product associations carry a default qty per item.
+                            if (linkType === 'associated') {
+                                var parsedQty = parseFloat(r.qty);
+                                entry.qty = isNaN(parsedQty) ? 1 : parsedQty;
+                            }
+                            kept.push(entry);
                         }
                     });
                     freshLinks[linkType] = kept;
@@ -132,11 +138,9 @@ define([
             if (anyDrFound) {
                 payload.links = freshLinks;
                 payload.links_managed = '1';
-                console.log('[SaveViaQueue] links from DynamicRows:', JSON.stringify(freshLinks));
             } else {
                 // Fallback: rawData.links — correct for additions, stale for deletions.
                 // Do NOT set links_managed so PHP skips setProductLinks() entirely (preserves existing links).
-                console.log('[SaveViaQueue] DynamicRows not found — falling back to rawData.links (no link sync)');
             }
 
             // ── Gallery removal sync ────────────────────────────────────────────────
@@ -165,7 +169,6 @@ define([
             });
             // gallery_remove_ids goes into the URL, not POST body — never truncated by max_input_vars.
             var galleryRemoveIdsStr = removeIds.join(',');
-            console.log('[SaveViaQueue] gallery_remove_ids:', galleryRemoveIdsStr);
 
             // ── Gallery: strip all rawData images, rebuild new uploads from DOM ──────
             //
@@ -256,9 +259,7 @@ define([
                         }
                     });
                 });
-                console.log('[SaveViaQueue] variation image files excluded from parent:', Object.keys(variationImageFiles));
             } catch (e) {
-                console.warn('[SaveViaQueue] configurable-matrix image exclusion error:', e);
             }
 
             var newDomImages = [];
@@ -275,14 +276,35 @@ define([
             if (newDomImages.length > 0) {
                 if (!payload.product) { payload.product = {}; }
                 payload.product.media_gallery = { images: newDomImages };
-                console.log('[SaveViaQueue] New uploads from DOM:', newDomImages.length,
-                    newDomImages.map(function (i) { return i.file; }));
             }
 
             // 4. Capture supplementary data from the DOM
+
+            // ── Multiselect attributes: read current selection directly from DOM ─────
+            // rawData may hold a stale comma-string (page-load value) if the user changed
+            // a multiselect after the page loaded. $(el).val() on a <select multiple>
+            // always returns the complete, live array of selected options.
+            // Collect those now and apply them to payload.product before the
+            // serializeArray loop runs, so the loop's flat assignment cannot overwrite them.
+            var multiSelectNames = {}; // tracks both 'product[attr]' and 'product[attr][]'
+            $('[name^="product["]').filter('select[multiple]').each(function () {
+                var selectedValues = $(this).val() || [];
+                var rawName  = this.name; // e.g. 'product[color][]' or 'product[color]'
+                var baseName = rawName.slice(-2) === '[]' ? rawName.slice(0, -2) : rawName;
+                multiSelectNames[baseName] = true;
+                multiSelectNames[rawName]  = true;
+                // 'product[color]' → 'color'
+                var attrKey = baseName.replace(/^product\[/, '').replace(/\]$/, '');
+                if (!payload.product) { payload.product = {}; }
+                payload.product[attrKey] = selectedValues;
+            });
+
             // Skip product[media_gallery][images][...] — new uploads are already
             // collected above (Step 2-4); existing images are intentionally omitted.
-            var allFormData = $('[name^="product["], [name^="configurable-"], [name="form_key"]')
+            var allFormData = $(
+                '[name^="product["], [name^="configurable-"], [name^="bundle_options["],' +
+                '[name="affect_bundle_product_selections"], [name="form_key"]'
+            )
                 .not('[data-index="configurable_matrix"] *')
                 .not('.admin__control-table *')
                 .not('.configurable-matrix *')
@@ -299,17 +321,14 @@ define([
                     return;
                 }
 
-                // Skip multiselect fields (name ends with []).
-                // rawData already carries the correct comma-separated value for every
-                // multiselect attribute (e.g. "1,2,3"). serializeArray() emits one entry
-                // per selected option with the same name, so a plain assignment would keep
-                // only the last option. Skipping here lets the rawData value through intact.
-                if (name.slice(-2) === '[]') {
+                // Skip multiselect fields — already collected above from $(select[multiple]).val()
+                // so every selected option is captured as an array, not overwritten one-by-one.
+                if (name.slice(-2) === '[]' || multiSelectNames[name]) {
                     return;
                 }
 
-                // Merge product fields and other relevant inputs
-                // Flat assignment ensures PHP correctly reconstructs nested arrays like media_gallery
+                // Merge product fields and other relevant inputs.
+                // Flat assignment: PHP reconstructs nested arrays from bracket-notation keys.
                 if (name.indexOf('product[') === 0) {
                     if (name === 'product[image]' || name === 'product[small_image]' ||
                         name === 'product[thumbnail]' || name === 'product[swatch_image]') {
@@ -324,6 +343,7 @@ define([
                         payload[name] = value;
                     }
                 } else if (name !== 'product') {
+                    // Covers bundle_options[...], affect_bundle_product_selections, form_key, etc.
                     payload[name] = value;
                 }
             });
@@ -345,8 +365,6 @@ define([
                 payload['configurable-matrix'] = Array.isArray(rawCm)
                     ? JSON.stringify(rawCm)
                     : (typeof rawCm === 'string' ? rawCm : JSON.stringify(rawCm));
-                console.log('[SaveViaQueue] Serialized rawData configurable-matrix, rows:',
-                    Array.isArray(rawCm) ? rawCm.length : typeof rawCm);
             }
             delete payload['variations-matrix'];
             var rawVm = rawData['variations-matrix'];

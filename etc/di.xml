@@ -37,6 +37,9 @@
             <argument name="customOptionProcessor" xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\CustomOptionProcessor</argument>
             <argument name="configurableProcessor" xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\ConfigurableProcessor</argument>
             <argument name="stockProcessor"        xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\StockProcessor</argument>
+            <argument name="bundleProcessor"       xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\BundleProcessor</argument>
+            <argument name="groupedProcessor"        xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\GroupedProcessor</argument>
+            <argument name="downloadableProcessor"   xsi:type="object">Mohan\ProductQueueSave\Queue\Processor\DownloadableProcessor</argument>
         </arguments>
     </type>
 

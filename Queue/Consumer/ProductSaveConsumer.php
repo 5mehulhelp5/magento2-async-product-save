@@ -26,6 +26,9 @@ use Mohan\ProductQueueSave\Logger\Logger;
 use Mohan\ProductQueueSave\Model\Queue\Log;
 use Mohan\ProductQueueSave\Model\Queue\LogFactory;
 use Mohan\ProductQueueSave\Model\ResourceModel\Queue\Log as LogResource;
+use Mohan\ProductQueueSave\Queue\Processor\BundleProcessor;
+use Mohan\ProductQueueSave\Queue\Processor\DownloadableProcessor;
+use Mohan\ProductQueueSave\Queue\Processor\GroupedProcessor;
 use Mohan\ProductQueueSave\Queue\Processor\ImageProcessor;
 use Mohan\ProductQueueSave\Queue\Processor\TierPriceProcessor;
 use Mohan\ProductQueueSave\Queue\Processor\LinkProcessor;
@@ -56,6 +59,9 @@ class ProductSaveConsumer
         private readonly CustomOptionProcessor $customOptionProcessor,
         private readonly ConfigurableProcessor $configurableProcessor,
         private readonly StockProcessor $stockProcessor,
+        private readonly BundleProcessor $bundleProcessor,
+        private readonly GroupedProcessor $groupedProcessor,
+        private readonly DownloadableProcessor $downloadableProcessor,
         private readonly \Magento\Catalog\Model\Product\Gallery\Processor $galleryProcessor,
         private readonly Config $config,
         private readonly Logger $logger,
@@ -209,6 +215,7 @@ class ProductSaveConsumer
         $this->tierPriceProcessor->process($product, $productData['tier_price'] ?? []);
         $this->linkProcessor->process($product, $productData);
         $this->customOptionProcessor->process($product, $productData['options'] ?? []);
+        $this->bundleProcessor->process($product, $productData);
 
         // ── 7. Handle Gallery (Deletions & Additions) ───────────────────────
 
@@ -335,6 +342,11 @@ class ProductSaveConsumer
         }
 
 
+        // ── 7.2 Downloadable links & samples ────────────────────────────
+        // Must run BEFORE productRepository->save() so extension attributes are
+        // visible to Link\UpdateHandler and Sample\UpdateHandler.
+        $this->downloadableProcessor->process($product, $productData);
+
         // ── 8. Single Repository Save ────────────────────────────────────────
         // Safeguard for empty price on configurable products
         if ($product->getTypeId() === Configurable::TYPE_CODE && ($product->getPrice() === null || $product->getPrice() === '')) {
@@ -348,12 +360,18 @@ class ProductSaveConsumer
 
         $savedProduct = $this->productRepository->save($product);
 
-        // ── 9. Configurable associations ─────────────────────────────────────
+        // ── 9. Grouped product qty fix ───────────────────────────────────────
+        // SaveHandler re-inserts grouped links but loses qty via the extension
+        // attribute path (DataObjectProcessor skips null getQty()). Fix it
+        // by calling saveProductLinks directly with the raw qty from the payload.
+        $this->groupedProcessor->process($savedProduct, $productData);
+
+        // ── 10. Configurable associations ────────────────────────────────────
         if ($savedProduct->getTypeId() === Configurable::TYPE_CODE) {
             $this->configurableProcessor->process($savedProduct, $productData);
         }
 
-        // ── 10. Fix category links (applied after ALL saves) ──────────────────
+        // ── 11. Fix category links (applied after ALL saves) ──────────────────
         // Both productRepository->save() calls (here and inside ConfigurableProcessor)
         // use SaveHandler::mergeCategoryLinks() which merges stale DTO category_links
         // (from ReadHandler) back with model category_ids — re-adding any removed

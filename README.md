@@ -1,22 +1,27 @@
 # Mohan_ProductQueueSave — Magento 2 Async Product Save
 
-A Magento 2 module that adds a **"Save via Queue & Close"** button to the admin product edit page. Instead of saving the product synchronously (which can time out on large catalogues or configurable products with many variations), it pushes the save operation onto Magento's message queue and processes it in the background via a long-running PHP consumer.
+A Magento 2 module that adds a **"Save via Queue & Close"** button to the admin product edit page. Instead of saving the product synchronously (which can time out on large catalogues or complex products), it pushes the save operation onto Magento's message queue and processes it in the background via a long-running PHP consumer.
 
 ---
 
 ## Features
 
 - Async product save via `Magento_MessageQueue` — no browser timeout
-- Full support for:
-  - Simple and configurable products
-  - Variation creation and sync (status, price, qty, images)
-  - Media gallery — new uploads, role assignment, image removal
-  - Tier prices
-  - Custom options
-  - Related / upsell / cross-sell links
-  - Category assignments
-  - Website assignments
-  - Stock (qty, in-stock flag)
+- Full support for **all product types**:
+  - **Simple products** — all attributes, custom options, tier prices, links
+  - **Configurable products** — variation creation and sync (status, price, qty, images per child)
+  - **Grouped products** — associated product links with default quantities
+  - **Bundle products** — bundle options and selections
+  - **Downloadable products** — link files, link samples, and standalone samples
+  - **Virtual products** — treated the same as simple
+- Media gallery — new uploads, role assignment, image removal
+- Tier prices
+- Custom options
+- Related / upsell / cross-sell links
+- Category assignments
+- Website assignments
+- Stock (qty, in-stock flag)
+- Multiselect attribute values
 - Admin queue log grid — see pending, processing, success, and failed jobs
 - Nightly cleanup cron — removes completed queue messages automatically (keeps DB size in check)
 - CLI status command: `bin/magento mohan:product-queue:status`
@@ -49,7 +54,7 @@ php bin/magento cache:flush
 
 ### Manual
 
-1. Copy the `Mohan/ProductQueueSave` directory into `app/code/Mohan/ProductQueueSave/`
+1. Copy the module files into `app/code/Mohan/ProductQueueSave/`
 2. Run:
 
 ```bash
@@ -79,6 +84,8 @@ The consumer is a long-running PHP process. Start it on your server:
 ```bash
 php bin/magento queue:consumers:start mohan.product.queue.save.consumer
 ```
+
+> **Important:** Run the consumer as the **same OS user as your web server** (typically `www-data`). Uploaded files in the media tmp directory are owned by the web server user — the consumer needs write access to that directory to move files to permanent storage.
 
 For production, manage it with **Supervisor** so it restarts automatically on crash:
 
@@ -130,8 +137,12 @@ Queue Consumer (long-running CLI process)
   → Unserializes message
   → Loads existing product from repository
   → Applies: stock, tier prices, links, custom options, gallery, categories
+  → Runs type-specific processors:
+      • ConfigurableProcessor  — creates/syncs child variations and images
+      • GroupedProcessor       — saves associated links with default qty
+      • BundleProcessor        — saves bundle options and selections
+      • DownloadableProcessor  — moves link/sample files and saves extension attributes
   → productRepository->save()
-  → For configurables: creates/syncs child variations, saves images per variation
   → Marks log entry as success / failed
 ```
 
@@ -141,6 +152,7 @@ Magento's synchronous product save can take 30–120 seconds for:
 - Configurable products with 50+ variations
 - Products with large media galleries (100+ images)
 - Catalogues with deep category trees
+- Downloadable products with multiple file links
 
 This module moves that work off the HTTP request entirely.
 

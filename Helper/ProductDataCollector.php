@@ -102,8 +102,9 @@ class ProductDataCollector extends AbstractHelper
             // ---- Grouped product links ----
             'links'                      => $this->request->getPost('links', []),
             // ---- Bundle options ----
-            'bundle_options'             => $this->request->getPost('bundle_options', []),
-            'bundle_selections'          => $this->request->getPost('bundle_selections', []),
+            'bundle_options'                  => $this->request->getPost('bundle_options', []),
+            'bundle_selections'               => $this->request->getPost('bundle_selections', []),
+            'affect_bundle_product_selections' => (bool) $this->request->getPost('affect_bundle_product_selections', false),
             // ---- Downloadable ----
             'downloadable'               => $this->request->getPost('downloadable', []),
             // ---- Custom options ----
